@@ -246,6 +246,9 @@ CMpcVideoRenderer::CMpcVideoRenderer(LPUNKNOWN pUnk, HRESULT* phr)
 		if (ERROR_SUCCESS == key.QueryDWORDValue(OPT_ReinitByDisplay, dw)) {
 			m_Sets.bReinitByDisplay = !!dw;
 		}
+		if (ERROR_SUCCESS == key.QueryDWORDValue(OPT_VrrSupport, dw)) {
+			m_Sets.bVrrSupport = !!dw;
+		}
 		if (ERROR_SUCCESS == key.QueryDWORDValue(OPT_HdrPreferDoVi, dw)) {
 			m_Sets.bHdrPreferDoVi = !!dw;
 		}

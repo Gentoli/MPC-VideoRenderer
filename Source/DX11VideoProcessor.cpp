@@ -1155,25 +1155,6 @@ void CDX11VideoProcessor::UpdateTexParams(int cdepth)
 	}
 }
 
-bool CDX11VideoProcessor::IsTearingSupported()
-{
-	static bool bChecked = false;
-	static bool bAllowTearing = false;
-
-	if (!bChecked) {
-		CComPtr<IDXGIFactory5> pFactory5;
-		if (m_pDXGIFactory1 && SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
-			BOOL tearingSupported = FALSE;
-			if (SUCCEEDED(pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported)))) {
-				bAllowTearing = !!tearingSupported;
-			}
-		}
-		bChecked = true;
-	}
-
-	return bAllowTearing;
-}
-
 void CDX11VideoProcessor::UpdateRenderRect()
 {
 	m_renderRect.IntersectRect(m_videoRect, m_windowRect);
@@ -1515,7 +1496,7 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 			desc1.BufferCount = bHdrOutput ? 6 : 2;
 			desc1.Scaling = DXGI_SCALING_NONE;
 			desc1.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-			if (m_bVrrSupport && IsTearingSupported()) {
+			if (m_bVrrSupport) {
 				desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 			}
 		} else { // SWAPEFFECT_Discard or Windows 7
@@ -1547,7 +1528,7 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 			desc1.BufferCount = bHdrOutput ? 6 : 2;
 			desc1.Scaling = DXGI_SCALING_NONE;
 			desc1.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-			if (m_bVrrSupport && IsTearingSupported()) {
+			if (m_bVrrSupport) {
 				desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 			}
 		} else { // SWAPEFFECT_Discard or Windows 7
@@ -2837,7 +2818,7 @@ HRESULT CDX11VideoProcessor::Render(int field, const REFERENCE_TIME frameStartTi
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bVrrSupport && IsTearingSupported() && !m_bExclusiveScreen) {
+	if (m_bVrrSupport && !m_bExclusiveScreen) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -2899,7 +2880,7 @@ HRESULT CDX11VideoProcessor::FillBlack()
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bVrrSupport && IsTearingSupported() && !m_bExclusiveScreen) {
+	if (m_bVrrSupport && !m_bExclusiveScreen) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -3991,6 +3972,23 @@ void CDX11VideoProcessor::Configure(const Settings_t& config)
 	if (config.bVPRTXVideoHDR != m_bVPRTXVideoHDR) {
 		m_bVPRTXVideoHDR = config.bVPRTXVideoHDR;
 		changeRTXVideoHDR = true;
+	}
+
+	{
+		bool bNewVrrSupport = config.bVrrSupport;
+		if (bNewVrrSupport) {
+			CComPtr<IDXGIFactory5> pFactory5;
+			BOOL tearingSupported = FALSE;
+			if (m_pDXGIFactory1 && SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
+				pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
+			}
+			bNewVrrSupport = !!tearingSupported;
+		}
+
+		if (bNewVrrSupport != m_bVrrSupport) {
+			m_bVrrSupport = bNewVrrSupport;
+			changeWindow = !m_pFilter->m_bExclusiveScreen;
+		}
 	}
 
 	if (config.iSDRDisplayNits != m_iSDRDisplayNits) {
