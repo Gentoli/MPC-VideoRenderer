@@ -123,6 +123,7 @@ struct Settings_t {
 	bool bVBlankBeforePresent;
 	bool bAdjustPresentTime;
 	bool bReinitByDisplay;
+	bool bVrrSupport;
 	bool bHdrPreferDoVi;
 	bool bHdrPassthrough;
 	int  iHdrToggleDisplay;
