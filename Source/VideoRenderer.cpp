@@ -58,6 +58,7 @@
 #define OPT_VBlankBeforePresent            L"VBlankBeforePresent"
 #define OPT_AdjustPresentTime              L"AdjustPresentationTime"
 #define OPT_ReinitByDisplay                L"ReinitWhenChangingDisplay"
+#define OPT_VrrSupport                     L"VrrSupport"
 #define OPT_HdrPreferDoVi                  L"HdrPreferDoVi"
 #define OPT_HdrPassthrough                 L"HdrPassthrough"
 #define OPT_HdrLocaLToneMapping            L"HdrLocalToneMapping"
@@ -1300,6 +1301,7 @@ STDMETHODIMP CMpcVideoRenderer::SaveSettings()
 		key.SetDWORDValue(OPT_VBlankBeforePresent, m_Sets.bVBlankBeforePresent);
 		key.SetDWORDValue(OPT_AdjustPresentTime,   m_Sets.bAdjustPresentTime);
 		key.SetDWORDValue(OPT_ReinitByDisplay,     m_Sets.bReinitByDisplay);
+		key.SetDWORDValue(OPT_VrrSupport,          m_Sets.bVrrSupport);
 		key.SetDWORDValue(OPT_HdrPreferDoVi,       m_Sets.bHdrPreferDoVi);
 		key.SetDWORDValue(OPT_HdrPassthrough,      m_Sets.bHdrPassthrough);
 		key.SetDWORDValue(OPT_HdrLocaLToneMapping, m_Sets.bHdrLocalToneMapping);

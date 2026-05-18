@@ -399,6 +399,7 @@ CDX11VideoProcessor::CDX11VideoProcessor(CMpcVideoRenderer* pFilter, const Setti
 	m_iSwapEffect          = config.iSwapEffect;
 	m_bVBlankBeforePresent = config.bVBlankBeforePresent;
 	m_bAdjustPresentTime   = config.bAdjustPresentTime;
+	m_bVrrSupport          = config.bVrrSupport;
 	m_bHdrPreferDoVi       = config.bHdrPreferDoVi;
 	m_bHdrPassthrough      = config.bHdrPassthrough;
 	m_bHdrLocalToneMapping = config.bHdrLocalToneMapping;
@@ -1154,6 +1155,25 @@ void CDX11VideoProcessor::UpdateTexParams(int cdepth)
 	}
 }
 
+bool CDX11VideoProcessor::IsTearingSupported()
+{
+	static bool bChecked = false;
+	static bool bAllowTearing = false;
+
+	if (!bChecked) {
+		CComPtr<IDXGIFactory5> pFactory5;
+		if (m_pDXGIFactory1 && SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
+			BOOL tearingSupported = FALSE;
+			if (SUCCEEDED(pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported)))) {
+				bAllowTearing = !!tearingSupported;
+			}
+		}
+		bChecked = true;
+	}
+
+	return bAllowTearing;
+}
+
 void CDX11VideoProcessor::UpdateRenderRect()
 {
 	m_renderRect.IntersectRect(m_videoRect, m_windowRect);
@@ -1495,6 +1515,9 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 			desc1.BufferCount = bHdrOutput ? 6 : 2;
 			desc1.Scaling = DXGI_SCALING_NONE;
 			desc1.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+			if (m_bVrrSupport && IsTearingSupported()) {
+				desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+			}
 		} else { // SWAPEFFECT_Discard or Windows 7
 			desc1.BufferCount = 1;
 			desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -1524,6 +1547,9 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 			desc1.BufferCount = bHdrOutput ? 6 : 2;
 			desc1.Scaling = DXGI_SCALING_NONE;
 			desc1.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+			if (m_bVrrSupport && IsTearingSupported()) {
+				desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+			}
 		} else { // SWAPEFFECT_Discard or Windows 7
 			desc1.BufferCount = 1;
 			desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -2809,7 +2835,13 @@ HRESULT CDX11VideoProcessor::Render(int field, const REFERENCE_TIME frameStartTi
 	}
 
 	g_bPresent = true;
-	hr = m_pDXGISwapChain1->Present(1, 0);
+	UINT syncInterval = 1;
+	UINT presentFlags = 0;
+	if (m_bVrrSupport && IsTearingSupported() && !m_bExclusiveScreen) {
+		syncInterval = 0;
+		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+	}
+	hr = m_pDXGISwapChain1->Present(syncInterval, presentFlags);
 	g_bPresent = false;
 	DLogIf(FAILED(hr), L"CDX11VideoProcessor::Render() : Present() failed with error {}", HR2Str(hr));
 
@@ -2865,7 +2897,13 @@ HRESULT CDX11VideoProcessor::FillBlack()
 	}
 
 	g_bPresent = true;
-	hr = m_pDXGISwapChain1->Present(1, 0);
+	UINT syncInterval = 1;
+	UINT presentFlags = 0;
+	if (m_bVrrSupport && IsTearingSupported() && !m_bExclusiveScreen) {
+		syncInterval = 0;
+		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+	}
+	hr = m_pDXGISwapChain1->Present(syncInterval, presentFlags);
 	g_bPresent = false;
 	DLogIf(FAILED(hr), L"CDX11VideoProcessor::FillBlack() : Present() failed with error {}", HR2Str(hr));
 
@@ -4201,6 +4239,9 @@ void CDX11VideoProcessor::UpdateStatsPresent()
 		case DXGI_SWAP_EFFECT_FLIP_DISCARD:
 			m_strStatsPresent.append(L"Flip discard");
 			break;
+		}
+		if (swapchain_desc.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
+			m_strStatsPresent.append(L" (Tearing)");
 		}
 		m_strStatsPresent.append(L", ");
 		m_strStatsPresent.append(DXGIFormatToString(swapchain_desc.Format));

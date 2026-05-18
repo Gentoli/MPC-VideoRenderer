@@ -62,6 +62,7 @@ protected:
 	int  m_iSwapEffect                     = SWAPEFFECT_Flip;
 	bool m_bVBlankBeforePresent            = false;
 	bool m_bAdjustPresentTime              = true;
+	bool m_bVrrSupport                     = false;
 	bool m_bHdrPreferDoVi                  = false;
 	bool m_bHdrPassthrough                 = true;
 	bool m_bHdrLocalToneMapping            = false;

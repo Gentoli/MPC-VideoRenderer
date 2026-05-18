@@ -123,6 +123,7 @@ void CVRMainPPage::SetControls()
 	CheckDlgButton(IDC_CHECK15, m_SetsPP.bVBlankBeforePresent ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(IDC_CHECK13, m_SetsPP.bAdjustPresentTime   ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(IDC_CHECK16, m_SetsPP.bReinitByDisplay     ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(IDC_CHECK20, m_SetsPP.bVrrSupport         ? BST_CHECKED : BST_UNCHECKED);
 
 	SendDlgItemMessageW(IDC_COMBO6, CB_SETCURSEL, m_SetsPP.iResizeStats, 0);
 
@@ -323,6 +324,9 @@ HRESULT CVRMainPPage::OnActivate()
 	AddHint(IDC_COMBO4,
 		L"'Flip' is more efficient, but 'Discard' may work\n"
 		"more correctly in some rare situations.");
+	AddHint(IDC_CHECK20,
+		L"Enable Variable Refresh Rate (VRR) support.\n"
+		"Requires Direct3D 11 and a VRR-compatible display.");
 
 	return S_OK;
 }
@@ -410,6 +414,11 @@ INT_PTR CVRMainPPage::OnReceiveMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
 			}
 			if (nID == IDC_CHECK16) {
 				m_SetsPP.bReinitByDisplay = IsDlgButtonChecked(IDC_CHECK16) == BST_CHECKED;
+				SetDirty();
+				return (LRESULT)1;
+			}
+			if (nID == IDC_CHECK20) {
+				m_SetsPP.bVrrSupport = IsDlgButtonChecked(IDC_CHECK20) == BST_CHECKED;
 				SetDirty();
 				return (LRESULT)1;
 			}

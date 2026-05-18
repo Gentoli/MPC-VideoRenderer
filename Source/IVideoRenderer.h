@@ -166,6 +166,7 @@ struct Settings_t {
 		bVBlankBeforePresent            = false;
 		bAdjustPresentTime              = true;
 		bReinitByDisplay                = false;
+		bVrrSupport                     = false;
 		bHdrPreferDoVi                  = false;
 		if (IsWindows10OrGreater()) {
 			bHdrPassthrough             = true;

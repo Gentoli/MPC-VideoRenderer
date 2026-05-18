@@ -280,6 +280,7 @@ private:
 	HRESULT SetShaderDoviCurves();
 
 	void UpdateTexParams(int cdepth);
+	bool IsTearingSupported();
 	void UpdateRenderRect();
 	void UpdateScalingStrings();
 

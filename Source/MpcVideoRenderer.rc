@@ -108,6 +108,7 @@ BEGIN
     CONTROL         "Adjust the frame presentation time",IDC_CHECK13,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,178,191,133,10
     CONTROL         "Reinitialize device when changing display",IDC_CHECK16,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,178,204,151,10
+    CONTROL         "Enable VRR support (D3D11)",IDC_CHECK20,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,178,217,117,10
     PUSHBUTTON      "Default",IDC_BUTTON1,305,217,37,14
     EDITTEXT        IDC_EDIT2,76,248,266,12,ES_READONLY | NOT WS_BORDER,WS_EX_RIGHT
 END
