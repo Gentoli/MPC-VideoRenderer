@@ -418,6 +418,15 @@ CDX11VideoProcessor::CDX11VideoProcessor(CMpcVideoRenderer* pFilter, const Setti
 		return;
 	}
 
+	if (m_bVrrSupport) {
+		CComPtr<IDXGIFactory5> pFactory5;
+		BOOL tearingSupported = FALSE;
+		if (SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
+			pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
+		}
+		m_bVrrSupport = !!tearingSupported;
+	}
+
 	// set default ProcAmp ranges and values
 	SetDefaultDXVA2ProcAmpRanges(m_DXVA2ProcAmpRanges);
 	SetDefaultDXVA2ProcAmpValues(m_DXVA2ProcAmpValues);
@@ -3743,6 +3752,13 @@ HRESULT CDX11VideoProcessor::GetVPInfo(std::wstring& str)
 	}
 
 	str.append(m_strStatsDispInfo);
+
+	BOOL tearingSupported = FALSE;
+	CComPtr<IDXGIFactory5> pFactory5;
+	if (m_pDXGIFactory1 && SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
+		pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
+	}
+	str += std::format(L"\nVRR support     : {}, hardware tearing support: {}", m_bVrrSupport ? L"on" : L"off", tearingSupported ? L"yes" : L"no");
 
 	if (m_pPostScaleShaders.size()) {
 		str.append(L"\n\nPost scale pixel shaders:");
