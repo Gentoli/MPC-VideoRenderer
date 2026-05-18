@@ -2847,7 +2847,7 @@ HRESULT CDX11VideoProcessor::Render(int field, const REFERENCE_TIME frameStartTi
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bSwapChainAllowTearing) {
+	if (m_bSwapChainAllowTearing && m_pFilter->m_filterState == State_Running) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -2909,7 +2909,7 @@ HRESULT CDX11VideoProcessor::FillBlack()
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bSwapChainAllowTearing) {
+	if (m_bSwapChainAllowTearing && m_pFilter->m_filterState == State_Running) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -3498,7 +3498,16 @@ HRESULT CDX11VideoProcessor::SetWindowRect(const CRect& windowRect)
 	const UINT h = m_windowRect.Height();
 
 	if (m_pDXGISwapChain1 && !m_bExclusiveScreen) {
-		hr = m_pDXGISwapChain1->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0);
+		if (m_pDeviceContext) {
+			m_pDeviceContext->ClearState();
+			m_pDeviceContext->Flush();
+		}
+		UINT flags = m_bSwapChainAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+		hr = m_pDXGISwapChain1->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, flags);
+		if (FAILED(hr)) {
+			DLog(L"CDX11VideoProcessor::SetWindowRect() : ResizeBuffers() failed with error {}, recreating swap chain", HR2Str(hr));
+			InitSwapChain(false);
+		}
 	}
 
 	UpdateStatsByWindow();
