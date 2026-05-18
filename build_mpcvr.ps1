@@ -9,6 +9,7 @@ param(
 
 $Title = "MPC Video Renderer"
 $Project = "MpcVideoRenderer"
+$Project64 = "${Project}64"
 $BuildCfg = $Configuration
 $Suffix = if ($BuildCfg -eq "Debug") { "_Debug" } else { "" }
 $Wait = -not $NoWait
@@ -124,7 +125,9 @@ if (Get-Command $sevenZip -ErrorAction SilentlyContinue) {
     $Host.UI.RawUI.WindowTitle = "Creating archive $PckgName.zip..."
     $archiveFiles = @(
         "_bin\Filter_x86$Suffix\$Project.ax",
+        "_bin\Filter_x86$Suffix\$Project.pdb",
         "_bin\Filter_x64$Suffix\$Project64.ax",
+        "_bin\Filter_x64$Suffix\$Project64.pdb",
         "distrib\Install_MPCVR_32.cmd",
         "distrib\Install_MPCVR_64.cmd",
         "distrib\Uninstall_MPCVR_32.cmd",
