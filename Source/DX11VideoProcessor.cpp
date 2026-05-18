@@ -3758,7 +3758,14 @@ HRESULT CDX11VideoProcessor::GetVPInfo(std::wstring& str)
 	if (m_pDXGIFactory1 && SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
 		pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
 	}
+
+	DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {};
+	if (m_pDXGISwapChain1) {
+		m_pDXGISwapChain1->GetDesc1(&swapchain_desc);
+	}
+
 	str += std::format(L"\nVRR support     : {}, hardware tearing support: {}", m_bVrrSupport ? L"on" : L"off", tearingSupported ? L"yes" : L"no");
+	str += std::format(L"\nSwapchain tearing: {}, buffer count: {}", (swapchain_desc.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) ? L"enabled" : L"disabled", swapchain_desc.BufferCount);
 
 	if (m_pPostScaleShaders.size()) {
 		str.append(L"\n\nPost scale pixel shaders:");
@@ -4254,6 +4261,14 @@ void CDX11VideoProcessor::UpdateStatsPresent()
 			m_strStatsPresent.append(L"Flip discard");
 			break;
 		}
+
+		DXGI_FRAME_STATISTICS stats = {};
+		if (m_pDXGISwapChain1 && SUCCEEDED(m_pDXGISwapChain1->GetFrameStatistics(&stats))) {
+			if (stats.PresentRefreshCount == 0 && stats.SyncRefreshCount == 0) {
+				m_strStatsPresent.append(L" (Independent Flip)");
+			}
+		}
+
 		if (swapchain_desc.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
 			m_strStatsPresent.append(L" (Tearing)");
 		}
