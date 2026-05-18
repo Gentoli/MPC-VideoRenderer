@@ -30,6 +30,7 @@ jobs:
       - name: Build VideoRenderer
         run: |
           .\build_mpcvr.ps1 -Configuration Debug -NoWait
+          .\build_mpcvr.ps1 -Configuration Release -NoWait
         shell: pwsh
 
       - name: Upload build artifacts

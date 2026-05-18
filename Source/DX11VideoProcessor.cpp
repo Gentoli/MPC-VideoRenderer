@@ -1376,12 +1376,14 @@ HRESULT CDX11VideoProcessor::SetDevice(ID3D11Device *pDevice, ID3D11DeviceContex
 	BufferDesc = { sizeof(PS_EXTSHADER_CONSTANTS), D3D11_USAGE_DEFAULT, D3D11_BIND_CONSTANT_BUFFER, 0, 0, 0 };
 	EXECUTE_ASSERT(S_OK == m_pDevice->CreateBuffer(&BufferDesc, nullptr, &m_pPostScaleConstants));
 
-	hr = pDXGIAdapter->GetParent(IID_PPV_ARGS(&m_pDXGIFactory1));
+	CComPtr<IDXGIFactory1> pDXGIFactory1;
+	hr = pDXGIAdapter->GetParent(IID_PPV_ARGS(&pDXGIFactory1));
 	if (FAILED(hr)) {
 		DLog(L"CDX11VideoProcessor::SetDevice() : GetParent(IDXGIFactory1) failed with error {}", HR2Str(hr));
 		ReleaseDevice();
 		return hr;
 	}
+	m_pDXGIFactory1 = pDXGIFactory1;
 
 	hr = m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&m_pDXGIFactory2));
 	if (FAILED(hr)) {
