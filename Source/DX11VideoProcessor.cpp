@@ -783,6 +783,8 @@ void CDX11VideoProcessor::ReleaseSwapChain()
 	m_pDXGISwapChain4.Release();
 	m_pDXGISwapChain1.Release();
 
+	m_bSwapChainAllowTearing = false;
+
 	m_MaxDisplayLuminance = 0;
 }
 
@@ -1374,19 +1376,34 @@ HRESULT CDX11VideoProcessor::SetDevice(ID3D11Device *pDevice, ID3D11DeviceContex
 	BufferDesc = { sizeof(PS_EXTSHADER_CONSTANTS), D3D11_USAGE_DEFAULT, D3D11_BIND_CONSTANT_BUFFER, 0, 0, 0 };
 	EXECUTE_ASSERT(S_OK == m_pDevice->CreateBuffer(&BufferDesc, nullptr, &m_pPostScaleConstants));
 
-	CComPtr<IDXGIFactory1> pDXGIFactory1;
-	hr = pDXGIAdapter->GetParent(IID_PPV_ARGS(&pDXGIFactory1));
+	hr = pDXGIAdapter->GetParent(IID_PPV_ARGS(&m_pDXGIFactory1));
 	if (FAILED(hr)) {
 		DLog(L"CDX11VideoProcessor::SetDevice() : GetParent(IDXGIFactory1) failed with error {}", HR2Str(hr));
 		ReleaseDevice();
 		return hr;
 	}
 
-	hr = pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&m_pDXGIFactory2));
+	hr = m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&m_pDXGIFactory2));
 	if (FAILED(hr)) {
 		DLog(L"CDX11VideoProcessor::SetDevice() : QueryInterface(IDXGIFactory2) failed with error {}", HR2Str(hr));
 		ReleaseDevice();
 		return hr;
+	}
+
+	if (m_pFilter->m_Sets.bVrrSupport) {
+		CComPtr<IDXGIFactory5> pFactory5;
+		BOOL tearingSupported = FALSE;
+		if (SUCCEEDED(m_pDXGIFactory1->QueryInterface(IID_PPV_ARGS(&pFactory5)))) {
+			pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
+		}
+		m_bVrrSupport = !!tearingSupported;
+	}
+
+	if (m_bVrrSupport) {
+		CComPtr<IDXGIDevice1> pDXGIDevice1;
+		if (SUCCEEDED(m_pDevice->QueryInterface(IID_PPV_ARGS(&pDXGIDevice1)))) {
+			pDXGIDevice1->SetMaximumFrameLatency(1);
+		}
 	}
 
 	HRESULT hr3 = m_Font3D.InitDeviceObjects(m_pDevice, m_pDeviceContext);
@@ -1534,7 +1551,7 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 		desc1.SampleDesc.Quality = 0;
 		desc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		if ((m_iSwapEffect == SWAPEFFECT_Flip && IsWindows8OrGreater()) || bHdrOutput) {
-			desc1.BufferCount = bHdrOutput ? 6 : 2;
+			desc1.BufferCount = bHdrOutput ? 6 : 4;
 			desc1.Scaling = DXGI_SCALING_NONE;
 			desc1.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 			if (m_bVrrSupport) {
@@ -1558,6 +1575,7 @@ HRESULT CDX11VideoProcessor::InitSwapChain(bool bWindowChanged)
 
 	if (m_pDXGISwapChain1) {
 		m_UsedSwapEffect = desc1.SwapEffect;
+		m_bSwapChainAllowTearing = (desc1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0;
 
 		HRESULT hr2 = m_pDXGISwapChain1->GetContainingOutput(&m_pDXGIOutput);
 
@@ -2827,7 +2845,7 @@ HRESULT CDX11VideoProcessor::Render(int field, const REFERENCE_TIME frameStartTi
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bVrrSupport && !m_bExclusiveScreen) {
+	if (m_bSwapChainAllowTearing) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -2889,7 +2907,7 @@ HRESULT CDX11VideoProcessor::FillBlack()
 	g_bPresent = true;
 	UINT syncInterval = 1;
 	UINT presentFlags = 0;
-	if (m_bVrrSupport && !m_bExclusiveScreen) {
+	if (m_bSwapChainAllowTearing) {
 		syncInterval = 0;
 		presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 	}
@@ -4011,6 +4029,13 @@ void CDX11VideoProcessor::Configure(const Settings_t& config)
 		if (bNewVrrSupport != m_bVrrSupport) {
 			m_bVrrSupport = bNewVrrSupport;
 			changeWindow = !m_pFilter->m_bExclusiveScreen;
+
+			if (m_bVrrSupport) {
+				CComPtr<IDXGIDevice1> pDXGIDevice1;
+				if (SUCCEEDED(m_pDevice->QueryInterface(IID_PPV_ARGS(&pDXGIDevice1)))) {
+					pDXGIDevice1->SetMaximumFrameLatency(1);
+				}
+			}
 		}
 	}
 

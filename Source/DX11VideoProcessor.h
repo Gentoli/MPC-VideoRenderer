@@ -137,6 +137,8 @@ private:
 	std::vector<ExternalPixelShader11_t> m_pPostScaleShaders;
 	CComPtr<ID3D11Buffer> m_pPostScaleConstants;
 	CComPtr<ID3D11PixelShader> m_pPSHalfOUtoInterlace;
+	bool m_bSwapChainAllowTearing = false;
+
 	CComPtr<ID3D11PixelShader> m_pPSFinalPass;
 
 	CComPtr<IDXGIFactory2>   m_pDXGIFactory2;
